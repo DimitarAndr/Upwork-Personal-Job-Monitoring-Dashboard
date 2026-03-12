@@ -1,0 +1,115 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SourceType {
+  MANUAL
+  EMAIL_ALERT
+  JOB_DETAIL
+}
+
+enum LeadStatus {
+  NEW
+  REVIEWED
+  IGNORED
+  APPLIED
+  ARCHIVED
+}
+
+enum PricingType {
+  HOURLY
+  FIXED
+  UNKNOWN
+}
+
+enum TermType {
+  PROJECT_TYPE
+  STACK
+  SKILL
+  DOMAIN
+  ENGAGEMENT_TYPE
+}
+
+enum TagSource {
+  MANUAL
+  RULE
+  LLM
+}
+
+model Lead {
+  id               String         @id @default(cuid())
+  title            String
+  sourceType       SourceType
+  sourceUrl        String?
+  rawText          String
+  summary          String?
+  postedAt         DateTime?
+  pricingType      PricingType    @default(UNKNOWN)
+  hourlyMin        Decimal?
+  hourlyMax        Decimal?
+  fixedBudgetMin   Decimal?
+  fixedBudgetMax   Decimal?
+  durationText     String?
+  workloadText     String?
+  experienceLevel  String?
+  status           LeadStatus     @default(NEW)
+  reviewNotes      String?
+  portfolioGapNote String?
+  fitScore         Int?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  intakeRecords    IntakeRecord[]
+  leadTerms        LeadTerm[]
+
+  @@index([status, createdAt])
+  @@index([sourceType, postedAt])
+}
+
+model IntakeRecord {
+  id           String   @id @default(cuid())
+  leadId       String
+  channel      SourceType
+  externalId   String?
+  subject      String?
+  sender       String?
+  receivedAt   DateTime?
+  rawPayload   Json
+  parseVersion String   @default("v1")
+  createdAt    DateTime @default(now())
+  lead         Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId, createdAt])
+  @@index([externalId])
+}
+
+model TaxonomyTerm {
+  id        String     @id @default(cuid())
+  termType  TermType
+  label     String
+  slug      String     @unique
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  leadTerms LeadTerm[]
+
+  @@index([termType, isActive])
+}
+
+model LeadTerm {
+  leadId     String
+  termId     String
+  tagSource  TagSource @default(MANUAL)
+  confidence Int?
+  createdAt  DateTime  @default(now())
+  lead       Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  term       TaxonomyTerm @relation(fields: [termId], references: [id], onDelete: Cascade)
+
+  @@id([leadId, termId])
+  @@index([termId])
+}
+

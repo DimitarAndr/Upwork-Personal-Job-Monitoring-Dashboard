@@ -1,0 +1,29 @@
+{
+  "channel": "EMAIL_ALERT",
+  "externalId": "<message-id-from-yahoo>",
+  "subject": "New jobs matching: Next.js + NestJS",
+  "sender": "alerts@upwork.com",
+  "receivedAt": "2026-03-12T08:40:00.000Z",
+  "title": "Build MVP Dashboard with Next.js",
+  "sourceUrl": "https://www.upwork.com/jobs/~example",
+  "rawText": "Client needs a dashboard app with auth, RBAC, and billing integrations...",
+  "summary": "Next.js dashboard with API integration and Stripe billing.",
+  "pricingType": "HOURLY",
+  "hourlyMin": 30,
+  "hourlyMax": 60,
+  "durationText": "1 to 3 months",
+  "workloadText": "30+ hrs/week",
+  "experienceLevel": "Intermediate",
+  "visibleSkills": [
+    "Next.js",
+    "Node.js",
+    "Stripe",
+    "RBAC"
+  ],
+  "rawPayload": {
+    "source": "yahoo-imap",
+    "mailbox": "INBOX",
+    "originalHtml": "<html>...</html>"
+  }
+}
+
