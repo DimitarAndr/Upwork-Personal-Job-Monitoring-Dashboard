@@ -13,7 +13,7 @@ Mark each item as done in this file while implementing.
 
 - [ ] Run PostgreSQL locally (Docker or local install)
 - [ ] Run `prisma migrate dev` for the initial schema
-- [ ] Add Prisma service + module in NestJS
+- [x] Add Prisma service + module in NestJS
 - [ ] Implement `POST /api/leads` (manual intake)
 - [ ] Implement `GET /api/leads` with pagination + status filter
 - [ ] Implement `GET /api/leads/:id`
@@ -37,10 +37,10 @@ Mark each item as done in this file while implementing.
 ## Phase 4: Yahoo email intake with n8n
 
 - [ ] Build n8n workflow: Yahoo IMAP -> parse alert -> HTTP request to API
-- [ ] Implement `POST /api/intake/email`
+- [x] Implement `POST /api/intake/email`
 - [ ] Add dedupe strategy (message-id + URL hash + title/date fallback)
-- [ ] Store raw email payload in `intake_records`
-- [ ] Mark incoming leads as `NEW`
+- [x] Store raw email payload in `intake_records`
+- [x] Mark incoming leads as `NEW`
 
 ## Phase 5: Insights MVP
 
@@ -69,4 +69,3 @@ Mark each item as done in this file while implementing.
 - [ ] Leads are reviewable and taggable
 - [ ] Dashboard shows top stacks/skills/project types and basic timeline
 - [ ] System is usable daily as an internal operating tool
-
