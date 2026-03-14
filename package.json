@@ -7,12 +7,18 @@
     "packages/*"
   ],
   "scripts": {
+    "dev": "bash ./scripts/dev-all.sh",
+    "dev:all": "bash ./scripts/dev-all.sh",
     "dev:web": "npm run dev --workspace apps/web",
     "dev:api": "npm run start:dev --workspace apps/api",
     "build:web": "npm run build --workspace apps/web",
     "build:api": "npm run build --workspace apps/api",
     "db:up": "docker compose up -d postgres",
-    "db:down": "docker compose down",
+    "db:down": "docker compose stop postgres",
+    "n8n:up": "docker compose up -d n8n",
+    "n8n:down": "docker compose stop n8n",
+    "services:up": "docker compose up -d",
+    "services:down": "docker compose down",
     "lint": "npm run lint --workspaces --if-present",
     "format": "npm run format --workspaces --if-present"
   },

@@ -6,6 +6,7 @@ export interface CreateEmailIntakeDto {
   subject?: string;
   sender?: string;
   receivedAt?: string;
+  postedAt?: string;
   title: string;
   sourceUrl?: string;
   rawText: string;

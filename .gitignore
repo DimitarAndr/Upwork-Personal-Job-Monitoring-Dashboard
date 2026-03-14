@@ -10,3 +10,5 @@ coverage/
 *.tsbuildinfo
 apps/api/generated/
 .prisma-engines-cache/
+.history/
+docs/deep-research-report.md

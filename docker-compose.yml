@@ -12,6 +12,25 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:2.11.2
+    container_name: proposal-intel-n8n
+    restart: unless-stopped
+    ports:
+      - "${N8N_PORT:-5678}:5678"
+    environment:
+      TZ: ${GENERIC_TIMEZONE:-UTC}
+      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-UTC}
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
+      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "true"
+      N8N_RUNNERS_ENABLED: "true"
+      INTAKE_WEBHOOK_KEY: ${INTAKE_WEBHOOK_KEY:-}
+    extra_hosts:
+      # Lets the container reach the locally running Nest API when host-gateway mapping is needed.
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - n8n_data:/home/node/.n8n
+
 volumes:
   postgres_data:
-
+  n8n_data:
