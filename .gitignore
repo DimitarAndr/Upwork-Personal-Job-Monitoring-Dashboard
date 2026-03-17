@@ -6,9 +6,13 @@ node_modules/
 dist/
 coverage/
 .next/
+.next-dev/
 *.log
 *.tsbuildinfo
 apps/api/generated/
 .prisma-engines-cache/
 .history/
 docs/deep-research-report.md
+.secrets/
+docs/n8n_data.json
+docs/deep-research-analysis.md

@@ -1,16 +1,10 @@
-import { PricingType, SourceType } from "@prisma/client";
+import { PricingType } from "@prisma/client";
 
-export interface CreateEmailIntakeDto {
-  channel?: SourceType;
-  externalId?: string;
-  parseVersion?: string;
-  subject?: string;
-  sender?: string;
-  receivedAt?: string;
-  postedAt?: string;
-  title: string;
+export interface CreateLeadEnrichmentDto {
+  title?: string;
   sourceUrl?: string;
-  rawText: string;
+  rawText?: string;
+  rawHtml?: string;
   summary?: string;
   pricingType?: PricingType;
   hourlyMin?: number;
@@ -20,11 +14,9 @@ export interface CreateEmailIntakeDto {
   durationText?: string;
   workloadText?: string;
   experienceLevel?: string;
-  visibleSkills?: string[];
   clientCountry?: string;
   clientRating?: number;
   clientSpent?: number;
   clientPaymentVerified?: boolean;
   agencyRequired?: boolean;
-  rawPayload: Record<string, unknown>;
 }

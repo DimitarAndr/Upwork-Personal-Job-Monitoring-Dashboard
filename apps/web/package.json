@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "clean": "node -e \"for (const dir of ['.next', '.next-dev']) require('fs').rmSync(dir, { recursive: true, force: true })\"",
+    "predev": "npm run clean",
     "dev": "next dev -p 3000",
     "build": "next build",
     "start": "next start -p 3000",
@@ -20,4 +22,3 @@
     "typescript": "^5.7.2"
   }
 }
-

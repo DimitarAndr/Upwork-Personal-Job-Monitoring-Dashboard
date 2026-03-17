@@ -21,6 +21,18 @@ enum LeadStatus {
   ARCHIVED
 }
 
+enum EnrichmentStatus {
+  NONE
+  RECOMMENDED
+  ENRICHED
+}
+
+enum FieldConfidence {
+  LOW
+  MEDIUM
+  HIGH
+}
+
 enum PricingType {
   HOURLY
   FIXED
@@ -57,6 +69,13 @@ model Lead {
   durationText     String?
   workloadText     String?
   experienceLevel  String?
+  clientCountry    String?
+  clientRating     Decimal?
+  clientSpent      Decimal?
+  clientPaymentVerified Boolean?
+  agencyRequired   Boolean?
+  enrichmentStatus EnrichmentStatus @default(NONE)
+  enrichedAt       DateTime?
   status           LeadStatus     @default(NEW)
   reviewNotes      String?
   portfolioGapNote String?
@@ -65,9 +84,11 @@ model Lead {
   updatedAt        DateTime       @updatedAt
   intakeRecords    IntakeRecord[]
   leadTerms        LeadTerm[]
+  fieldProvenance  LeadFieldProvenance[]
 
   @@index([status, createdAt])
   @@index([sourceType, postedAt])
+  @@index([enrichmentStatus, postedAt])
 }
 
 model IntakeRecord {
@@ -113,3 +134,18 @@ model LeadTerm {
   @@index([termId])
 }
 
+model LeadFieldProvenance {
+  id            String          @id @default(cuid())
+  leadId        String
+  fieldName     String
+  sourceChannel SourceType
+  parseVersion  String?
+  confidence    FieldConfidence @default(MEDIUM)
+  valueJson     Json?
+  extractedAt   DateTime        @default(now())
+  createdAt     DateTime        @default(now())
+  lead          Lead            @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId, fieldName, extractedAt])
+  @@index([fieldName, sourceChannel, parseVersion])
+}

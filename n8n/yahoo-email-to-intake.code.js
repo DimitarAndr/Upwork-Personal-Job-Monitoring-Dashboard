@@ -1,6 +1,8 @@
 // Paste this into an n8n Code node that runs after your Yahoo IMAP trigger.
 // It normalizes the mail item into the JSON contract expected by POST /api/intake/email.
 
+const PARSE_VERSION = "yahoo-imap-v2";
+
 function pickString(...values) {
   for (const value of values) {
     if (typeof value === "string" && value.trim().length > 0) {
@@ -48,8 +50,75 @@ function decodeHtmlEntities(value) {
   return value
     .replace(/&amp;/gi, "&")
     .replace(/&nbsp;/gi, " ")
+    .replace(/&hellip;/gi, "...")
     .replace(/&#39;/g, "'")
     .replace(/&quot;/g, "\"");
+}
+
+function getNonEmptyLines(rawText) {
+  return rawText
+    .split(/\r?\n/)
+    .map((line) => decodeHtmlEntities(line).replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+}
+
+function parseCompactAmount(value) {
+  const match = value.match(/\$?\s*(\d+(?:,\d{3})*(?:\.\d+)?)([KMB])?/i);
+  if (!match) {
+    return undefined;
+  }
+
+  const baseAmount = Number(match[1].replace(/,/g, ""));
+  if (!Number.isFinite(baseAmount)) {
+    return undefined;
+  }
+
+  const suffix = match[2]?.toUpperCase();
+  const multiplier = suffix === "K"
+    ? 1_000
+    : suffix === "M"
+      ? 1_000_000
+      : suffix === "B"
+        ? 1_000_000_000
+        : 1;
+
+  return baseAmount * multiplier;
+}
+
+function normalizeCountry(value) {
+  const normalized = value.replace(/\s+/g, " ").trim();
+  const upper = normalized.toUpperCase();
+  const aliases = {
+    AUS: "Australia",
+    BGD: "Bangladesh",
+    CAN: "Canada",
+    COL: "Colombia",
+    DEU: "Germany",
+    DNK: "Denmark",
+    GBR: "United Kingdom",
+    GEO: "Georgia",
+    IND: "India",
+    ISR: "Israel",
+    PAK: "Pakistan",
+    UKR: "Ukraine",
+    USA: "United States",
+    US: "United States",
+    VNM: "Vietnam"
+  };
+
+  if (upper === "U.S.A.") {
+    return "United States";
+  }
+
+  if (upper === "UK" || upper === "U.K.") {
+    return "United Kingdom";
+  }
+
+  if (aliases[upper]) {
+    return aliases[upper];
+  }
+
+  return normalized;
 }
 
 function findFirstUrl(text) {
@@ -87,12 +156,26 @@ function extractJobUrl(text, html) {
 }
 
 function parsePricing(rawText) {
-  const fixedPrefixMatch = rawText.match(/Fixed:\s*\$?(\d+(?:,\d{3})*(?:\.\d+)?)/i);
+  const fixedPrefixMatch = rawText.match(/Fixed(?:-price)?:\s*\$?\s*(\d+(?:,\d{3})*(?:\.\d+)?(?:[KMB])?)/i);
   if (fixedPrefixMatch) {
-    return {
-      pricingType: "FIXED",
-      fixedBudgetMin: Number(fixedPrefixMatch[1].replace(/,/g, ""))
-    };
+    const fixedBudgetMin = parseCompactAmount(fixedPrefixMatch[1]);
+    if (fixedBudgetMin !== undefined) {
+      return {
+        pricingType: "FIXED",
+        fixedBudgetMin
+      };
+    }
+  }
+
+  const fixedTitleMatch = rawText.match(/\(Fixed(?: Price)?\s*\$?\s*(\d+(?:,\d{3})*(?:\.\d+)?(?:[KMB])?)\)/i);
+  if (fixedTitleMatch) {
+    const fixedBudgetMin = parseCompactAmount(fixedTitleMatch[1]);
+    if (fixedBudgetMin !== undefined) {
+      return {
+        pricingType: "FIXED",
+        fixedBudgetMin
+      };
+    }
   }
 
   const hourlyRangeMatch = rawText.match(/Hourly:\s*\$?(\d+(?:\.\d+)?)\s*-\s*\$?(\d+(?:\.\d+)?)/i);
@@ -113,12 +196,15 @@ function parsePricing(rawText) {
     };
   }
 
-  const fixedMatch = rawText.match(/budget[:\s]+\$?(\d+(?:,\d{3})*(?:\.\d+)?)/i);
+  const fixedMatch = rawText.match(/budget[:\s]+\$?\s*(\d+(?:,\d{3})*(?:\.\d+)?(?:[KMB])?)/i);
   if (fixedMatch) {
-    return {
-      pricingType: "FIXED",
-      fixedBudgetMin: Number(fixedMatch[1].replace(/,/g, ""))
-    };
+    const fixedBudgetMin = parseCompactAmount(fixedMatch[1]);
+    if (fixedBudgetMin !== undefined) {
+      return {
+        pricingType: "FIXED",
+        fixedBudgetMin
+      };
+    }
   }
 
   return {
@@ -126,37 +212,77 @@ function parsePricing(rawText) {
   };
 }
 
+function normalizeDuration(line) {
+  const normalized = line.replace(/\s+/g, " ").trim();
+
+  if (/^(?:<\s*1 month|less than 1 month)$/i.test(normalized)) {
+    return {
+      value: "less than 1 month"
+    };
+  }
+
+  if (/^(?:1-3 months|1 to 3 months)$/i.test(normalized)) {
+    return {
+      value: "1-3 months"
+    };
+  }
+
+  if (/^(?:3-6 months|3 to 6 months)$/i.test(normalized)) {
+    return {
+      value: "3-6 months"
+    };
+  }
+
+  if (/^(?:6\+ months|>\s*6 months|more than 6 months)$/i.test(normalized)) {
+    return {
+      value: "6+ months"
+    };
+  }
+
+  return undefined;
+}
+
 function parseDuration(rawText) {
-  const shortTermMatch = rawText.match(/<\s*(\d+)\s*month/i);
-  if (shortTermMatch) {
-    return `less than ${shortTermMatch[1]} month`;
+  for (const line of getNonEmptyLines(rawText)) {
+    const normalized = normalizeDuration(line);
+    if (normalized) {
+      return normalized.value;
+    }
   }
 
-  const longTermMatch = rawText.match(/>\s*(\d+)\s*months/i);
-  if (longTermMatch) {
-    return `${longTermMatch[1]}+ months`;
+  return undefined;
+}
+
+function normalizeWorkload(line) {
+  const normalized = line.replace(/\s+/g, " ").trim();
+
+  const lessThanMatch = normalized.match(/^<\s*(\d+)\s*(?:hr\/wk|hrs?\/week)$/i);
+  if (lessThanMatch) {
+    return `< ${lessThanMatch[1]} hr/wk`;
   }
 
-  const match = rawText.match(
-    /(less than 1 month|1 to 3 months|3 to 6 months|6\+ months|more than 6 months)/i
-  );
+  const moreThanMatch = normalized.match(/^>\s*(\d+)\s*(?:hr\/wk|hrs?\/week)$/i);
+  if (moreThanMatch) {
+    return `> ${moreThanMatch[1]} hr/wk`;
+  }
 
-  return match ? match[1] : undefined;
+  const exactMatch = normalized.match(/^(\d+)\+?\s*(?:hr\/wk|hrs?\/week)$/i);
+  if (exactMatch) {
+    return normalized.includes("+") ? `${exactMatch[1]}+ hr/wk` : `${exactMatch[1]} hr/wk`;
+  }
+
+  return undefined;
 }
 
 function parseWorkload(rawText) {
-  const lowWorkloadMatch = rawText.match(/<\s*(\d+)\s*hr\/wk/i);
-  if (lowWorkloadMatch) {
-    return `< ${lowWorkloadMatch[1]} hr/wk`;
+  for (const line of getNonEmptyLines(rawText)) {
+    const normalized = normalizeWorkload(line);
+    if (normalized) {
+      return normalized;
+    }
   }
 
-  const shorthandMatch = rawText.match(/>\s*(\d+\+?)\s*hr\/wk/i);
-  if (shorthandMatch) {
-    return `${shorthandMatch[1]} hr/wk`;
-  }
-
-  const match = rawText.match(/(\d+\+?\s*hrs?\/week)/i);
-  return match ? match[1] : undefined;
+  return undefined;
 }
 
 function parseExperienceLevel(rawText) {
@@ -167,13 +293,20 @@ function parseExperienceLevel(rawText) {
 function extractTitle(subject, rawText) {
   const subjectTitle = pickString(subject)
     ?.replace(/^new jobs matching:\s*/i, "")
-    .replace(/^new job:\s*/i, "");
-  if (subjectTitle) {
+    .replace(/^new job:\s*/i, "")
+    .trim();
+  if (subjectTitle && !/^new job alert$/i.test(subjectTitle)) {
     return subjectTitle;
   }
 
-  const firstSentence = rawText.split(/\r?\n|\.\s/).find((line) => line.trim().length > 12);
-  return firstSentence ? firstSentence.trim() : "Yahoo job alert";
+  const titleLine = getNonEmptyLines(rawText).find((line) =>
+    line.length > 12 &&
+    !/^new job alert$/i.test(line) &&
+    !/^hi,\s/i.test(line) &&
+    !/^[-]+$/i.test(line)
+  );
+
+  return titleLine ?? "Yahoo job alert";
 }
 
 function extractPostedAt(rawText) {
@@ -187,7 +320,7 @@ function extractPostedAt(rawText) {
 }
 
 function extractVisibleSkills(rawText) {
-  const matches = [...rawText.matchAll(/^\s*([A-Za-z0-9.+/# -]{2,40}):\s+https?:\/\/www\.upwork\.com\/jobs\/~/gim)];
+  const matches = [...rawText.matchAll(/^\s*([A-Za-z0-9.+/#&,'() -]{2,60}):\s+https?:\/\/www\.upwork\.com\/jobs\/~/gim)];
   const excludedLabels = new Set([
     "more",
     "view job details",
@@ -196,29 +329,111 @@ function extractVisibleSkills(rawText) {
     "manage your alert preferences"
   ]);
 
-  return [...new Set(matches
-    .map((match) => match[1].trim())
-    .filter((label) => !excludedLabels.has(label.toLowerCase()))
-    .filter((label) => !/^\+\d+$/.test(label))
-    .filter((label) => !/^\d+$/.test(label)))];
+  const visibleSkills = [];
+  let visibleSkillsExtraCount;
+
+  for (const match of matches) {
+    const label = decodeHtmlEntities(match[1]).replace(/\s+/g, " ").trim();
+    if (excludedLabels.has(label.toLowerCase())) {
+      continue;
+    }
+
+    if (/^\+\d+$/.test(label)) {
+      visibleSkillsExtraCount = Math.max(visibleSkillsExtraCount ?? 0, Number(label.slice(1)));
+      continue;
+    }
+
+    if (/^\d+$/.test(label) || /\.\.\./.test(label) || /\bmore\b/i.test(label)) {
+      continue;
+    }
+
+    visibleSkills.push(label);
+  }
+
+  return {
+    visibleSkills: [...new Set(visibleSkills)],
+    visibleSkillsExtraCount
+  };
+}
+
+function extractClientSpent(rawText) {
+  const match = rawText.match(/\$?\s*(\d+(?:,\d{3})*(?:\.\d+)?(?:[KMB])?)\s+spent/i);
+  return match ? parseCompactAmount(match[1]) : undefined;
 }
 
 function extractClientCountry(rawText) {
   const match = rawText.match(
-    /\$\d+(?:,\d{3})*(?:\.\d+)?\s+spent\s+([A-Za-z][A-Za-z .'-]{1,40})\s+[A-Za-z0-9.+/# -]{2,40}:\s+https?:\/\/www\.upwork\.com\/jobs\//i
+    /\$?\s*\d+(?:,\d{3})*(?:\.\d+)?(?:[KMB])?\s+spent\s+([A-Za-z][A-Za-z .'-]{1,40})(?=\s+(?:[A-Za-z0-9.+/#&,'() -]{2,60}:\s+https?:\/\/www\.upwork\.com\/jobs\/~|Posted on|View job details))/is
   );
 
-  return match ? match[1].trim() : undefined;
-}
-
-function extractClientSpent(rawText) {
-  const match = rawText.match(/\$(\d+(?:,\d{3})*(?:\.\d+)?)\s+spent/i);
-  return match ? Number(match[1].replace(/,/g, "")) : undefined;
+  return match ? normalizeCountry(match[1]) : undefined;
 }
 
 function extractClientRating(rawText) {
-  const match = rawText.match(/Payment verified\s+(\d(?:\.\d{1,2})?)\s+\$\d/i);
-  return match ? Number(match[1]) : undefined;
+  const match = rawText.match(
+    /Payment (?:verified|unverified)\s+(\d(?:\.\d{1,2})?)(?=\s+\$?\s*\d+(?:,\d{3})*(?:\.\d+)?(?:[KMB])?\s+spent)/is
+  );
+
+  if (!match) {
+    return undefined;
+  }
+
+  const rating = Number(match[1]);
+  return rating > 0 ? rating : undefined;
+}
+
+function extractClientSignals(rawText) {
+  const lines = getNonEmptyLines(rawText);
+  let clientPaymentVerified;
+  let clientRating;
+  let clientSpent;
+  let clientCountry;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+
+    if (/^Payment verified\b/i.test(line)) {
+      clientPaymentVerified = true;
+    } else if (/^Payment unverified\b/i.test(line)) {
+      clientPaymentVerified = false;
+    }
+
+    if (
+      clientRating === undefined &&
+      /^\d(?:\.\d{1,2})?$/.test(line) &&
+      /^Payment (?:verified|unverified)\b/i.test(lines[index - 1] ?? "")
+    ) {
+      const rating = Number(line);
+      clientRating = rating > 0 ? rating : undefined;
+    }
+
+    const spentLineMatch = line.match(/^\$?\s*(\d+(?:,\d{3})*(?:\.\d+)?(?:[KMB])?)\s+spent$/i);
+    if (spentLineMatch) {
+      clientSpent = parseCompactAmount(spentLineMatch[1]);
+
+      const countryLine = lines[index + 1];
+      if (
+        countryLine &&
+        /^[A-Za-z][A-Za-z .'-]{1,40}$/.test(countryLine) &&
+        !/^Posted on\b/i.test(countryLine) &&
+        !/^View job details\b/i.test(countryLine)
+      ) {
+        clientCountry = normalizeCountry(countryLine);
+      }
+    }
+  }
+
+  return {
+    agencyRequired: /agency required/i.test(rawText),
+    clientCountry: clientCountry ?? extractClientCountry(rawText),
+    clientPaymentVerified,
+    clientRating: clientRating ?? extractClientRating(rawText),
+    clientSpent: clientSpent ?? extractClientSpent(rawText)
+  };
+}
+
+function isDescriptionTruncated(rawText) {
+  return /\.\.\.\s+more:/i.test(rawText);
 }
 
 const input = $json;
@@ -246,12 +461,14 @@ const html = pickString(input.html, input.htmlBody, input.messageHtml) ?? "";
 const text = pickString(input.text, input.textPlain, input.messageText) ?? stripHtml(html);
 const postedAt = extractPostedAt(text);
 const pricing = parsePricing(text);
-const visibleSkills = extractVisibleSkills(text);
+const visibleSkillsInfo = extractVisibleSkills(text);
+const clientSignals = extractClientSignals(text);
 
 return {
   json: {
     channel: "EMAIL_ALERT",
     externalId,
+    parseVersion: PARSE_VERSION,
     subject,
     sender,
     receivedAt,
@@ -267,7 +484,12 @@ return {
     durationText: parseDuration(text),
     workloadText: parseWorkload(text),
     experienceLevel: parseExperienceLevel(text),
-    visibleSkills,
+    visibleSkills: visibleSkillsInfo.visibleSkills,
+    clientCountry: clientSignals.clientCountry,
+    clientPaymentVerified: clientSignals.clientPaymentVerified,
+    clientRating: clientSignals.clientRating,
+    clientSpent: clientSignals.clientSpent,
+    agencyRequired: clientSignals.agencyRequired,
     rawPayload: {
       source: "yahoo-imap",
       mailbox: pickString(input.mailbox, input.folder) ?? "INBOX",
@@ -275,13 +497,15 @@ return {
       originalText: text,
       headers,
       derived: {
-        agencyRequired: /agency required/i.test(text),
-        clientCountry: extractClientCountry(text),
-        clientPaymentVerified: /payment verified/i.test(text),
-        clientRating: extractClientRating(text),
-        clientSpent: extractClientSpent(text),
+        agencyRequired: clientSignals.agencyRequired,
+        clientCountry: clientSignals.clientCountry,
+        clientPaymentVerified: clientSignals.clientPaymentVerified,
+        clientRating: clientSignals.clientRating,
+        clientSpent: clientSignals.clientSpent,
+        descriptionTruncated: isDescriptionTruncated(text),
+        visibleSkillsExtraCount: visibleSkillsInfo.visibleSkillsExtraCount,
         postedAt,
-        visibleSkills
+        visibleSkills: visibleSkillsInfo.visibleSkills
       }
     }
   }

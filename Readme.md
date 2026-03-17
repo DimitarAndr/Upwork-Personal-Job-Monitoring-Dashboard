@@ -20,7 +20,7 @@ Internal product to collect freelance leads, analyze trends in stacks/skills, an
    ```bash
    cp .env.example .env
    ```
-   Also create `apps/api/.env` with the same `DATABASE_URL` value (Prisma CLI resolves env from the API workspace).
+   The API and Prisma scripts read from the root `.env`, so you do not need a separate `apps/api/.env`.
 
 3. Start PostgreSQL:
    ```bash
@@ -55,7 +55,7 @@ Internal product to collect freelance leads, analyze trends in stacks/skills, an
 
 ## n8n intake setup
 
-- Set `INTAKE_WEBHOOK_KEY` in both root `.env` and `apps/api/.env`.
+- Set `INTAKE_WEBHOOK_KEY` in the root `.env`.
 - Use the guide in [`n8n/README.md`](./n8n/README.md) to wire Yahoo IMAP -> transform -> `POST /api/intake/email`.
 
 ## Reuse existing PostgreSQL (no Docker needed)
@@ -79,19 +79,20 @@ If `prisma:status` returns migration status (instead of connection errors), DB c
 
 ## Optional: Codex PostgreSQL MCP
 
-You can connect Codex to Postgres through MCP without hardcoding the connection string in the command:
+The project includes a helper so Codex can connect to Postgres through MCP without retyping the full command:
 
 ```bash
-export POSTGRES_MCP_URL='postgresql://postgres:your_password@localhost:5432/proposal_intel?schema=public'
-codex mcp add postgres -- sh -lc 'npx -y @modelcontextprotocol/server-postgres "$POSTGRES_MCP_URL"'
-codex mcp list
-codex mcp get postgres
+npm run mcp:postgres:add
+npm run mcp:postgres:status
 ```
 
-To remove it:
+The helper reads `POSTGRES_MCP_URL` from the root `.env`. If that value is missing, it falls back to `DATABASE_URL`.
+It stores the connection under the `postgres` MCP server name in your local Codex config, so you only need to run the add step when the connection changes.
+
+To remove the MCP registration:
 
 ```bash
-codex mcp remove postgres
+npm run mcp:postgres:remove
 ```
 
 ## First implementation target

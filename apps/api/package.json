@@ -3,14 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "start": "node dist/main.js",
-    "start:dev": "nest start --watch",
+    "start": "DOTENV_CONFIG_PATH=../../.env node -r dotenv/config dist/main.js",
+    "start:dev": "DOTENV_CONFIG_PATH=../../.env node -r dotenv/config ../../node_modules/@nestjs/cli/bin/nest.js start --watch",
     "build": "nest build",
     "lint": "eslint \"src/**/*.ts\"",
     "format": "prettier --write \"src/**/*.ts\" \"prisma/**/*.prisma\"",
-    "prisma:generate": "mkdir -p ./.prisma-engines-cache && PRISMA_ENGINES_CACHE_DIR=./.prisma-engines-cache prisma generate",
-    "prisma:migrate": "mkdir -p ./.prisma-engines-cache && PRISMA_ENGINES_CACHE_DIR=./.prisma-engines-cache prisma migrate dev",
-    "prisma:status": "mkdir -p ./.prisma-engines-cache && PRISMA_ENGINES_CACHE_DIR=./.prisma-engines-cache prisma migrate status"
+    "prisma:generate": "mkdir -p ./.prisma-engines-cache && PRISMA_ENGINES_CACHE_DIR=./.prisma-engines-cache DOTENV_CONFIG_PATH=../../.env node -r dotenv/config ../../node_modules/prisma/build/index.js generate",
+    "prisma:migrate": "mkdir -p ./.prisma-engines-cache && PRISMA_ENGINES_CACHE_DIR=./.prisma-engines-cache DOTENV_CONFIG_PATH=../../.env node -r dotenv/config ../../node_modules/prisma/build/index.js migrate dev",
+    "prisma:status": "mkdir -p ./.prisma-engines-cache && PRISMA_ENGINES_CACHE_DIR=./.prisma-engines-cache DOTENV_CONFIG_PATH=../../.env node -r dotenv/config ../../node_modules/prisma/build/index.js migrate status"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
