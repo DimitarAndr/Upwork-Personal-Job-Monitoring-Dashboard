@@ -1,13 +1,11 @@
 import Link from "next/link";
+import { getAdminSessionState } from "../_lib/admin-auth";
+import { UserMenu } from "./user-menu";
 
 const navItems = [
   {
     href: "/",
     label: "Overview"
-  },
-  {
-    href: "/admin",
-    label: "Admin"
   },
   {
     href: "/portfolio",
@@ -19,20 +17,29 @@ type TopNavProps = {
   currentPath: string;
 };
 
-export function TopNav({ currentPath }: TopNavProps) {
+export async function TopNav({ currentPath }: TopNavProps) {
+  const { isAuthenticated, missingVars } = await getAdminSessionState();
+  const authReady = missingVars.length === 0;
+  const userName = isAuthenticated
+    ? "Admin"
+    : authReady
+      ? "Guest"
+      : "Authentication";
+  const userShortLabel = isAuthenticated ? "Admin" : authReady ? "Guest" : "Auth";
+  const userRole = isAuthenticated
+    ? "Internal account"
+    : authReady
+      ? "Public view"
+      : "Unavailable";
+  const userInitial = isAuthenticated ? "A" : authReady ? "G" : "?";
+
   return (
     <header className="topNav">
-      <Link className="brand" href="/">
-        <span className="brandMark" aria-hidden="true" />
-        <span className="brandCopy">
-          <strong>Proposal Intelligence</strong>
-          <span>Internal ops + external proof</span>
-        </span>
-      </Link>
-
       <nav className="navLinks" aria-label="Primary">
         {navItems.map((item) => {
-          const isActive = currentPath === item.href;
+          const isActive =
+            currentPath === item.href ||
+            (item.href !== "/" && currentPath.startsWith(`${item.href}/`));
 
           return (
             <Link
@@ -46,6 +53,17 @@ export function TopNav({ currentPath }: TopNavProps) {
           );
         })}
       </nav>
+
+      <div className="topNavActions">
+        <UserMenu
+          authReady={authReady}
+          isAuthenticated={isAuthenticated}
+          userInitial={userInitial}
+          userName={userName}
+          userRole={userRole}
+          userShortLabel={userShortLabel}
+        />
+      </div>
     </header>
   );
 }

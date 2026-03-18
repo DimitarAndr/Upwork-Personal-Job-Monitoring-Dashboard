@@ -28,6 +28,11 @@ Recommended node order:
 
 The code node converts a raw Yahoo email into the backend payload contract. It is intentionally defensive because n8n mail nodes vary slightly in field names.
 
+Important behavior:
+
+- The code node now drops non-job Upwork notifications such as milestone, contract, and workroom emails by returning no items.
+- Only emails that still look like real Upwork job alerts are forwarded to `/api/intake/email`.
+
 ### Yahoo IMAP credential
 
 Create an `IMAP` credential in n8n with:

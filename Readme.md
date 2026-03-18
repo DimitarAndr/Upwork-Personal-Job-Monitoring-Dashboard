@@ -42,6 +42,24 @@ Internal product to collect freelance leads, analyze trends in stacks/skills, an
 6. Verify health endpoint:
    - `GET http://localhost:4000/api/health`
 
+## Internal admin auth
+
+The admin UI at `/admin` uses a shared login token plus a signed session cookie. Set both in the
+root `.env`:
+
+```bash
+ADMIN_AUTH_TOKEN=replace-with-a-long-random-login-token
+ADMIN_SESSION_SECRET=replace-with-a-different-long-random-session-secret
+```
+
+You can generate both with:
+
+```bash
+openssl rand -hex 32
+```
+
+Then open `/internal-ops/login` and enter `ADMIN_AUTH_TOKEN`.
+
 ## Local n8n
 
 1. Set `N8N_ENCRYPTION_KEY` in root `.env`.

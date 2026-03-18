@@ -1,29 +1,16 @@
 export const modeCards = [
   {
-    href: "/admin",
-    eyebrow: "Power user",
-    title: "Admin workspace",
-    summary: "Use this route to decide what to pursue, what to ignore, and what proof to build next.",
-    points: [
-      "Lead inbox, filters, and review workflow",
-      "Recurring demand and portfolio-gap signals",
-      "Internal notes and client-quality context"
-    ],
-    cta: "Open admin view",
-    audience: "For you and other internal operators"
-  },
-  {
     href: "/portfolio",
-    eyebrow: "Client-facing",
-    title: "Portfolio proof",
-    summary: "Use this route as the basis for a clean, tailored page you can actually send to prospects.",
+    eyebrow: "Proof",
+    title: "Portfolio",
+    summary: "A quieter proof layer for fit, delivery taste, and selected work.",
     points: [
-      "Relevant project selection and proof points",
-      "Grounded explanation of why the fit is strong",
-      "A delivery approach without inbox noise"
+      "Selected work only",
+      "Relevant stacks and proof points",
+      "No intake or scoring noise"
     ],
-    cta: "Open portfolio view",
-    audience: "For clients and external reviewers"
+    cta: "Open portfolio",
+    audience: "External"
   }
 ];
 
@@ -120,78 +107,95 @@ export const adminLeadPreview = [
 ];
 
 export const portfolioCapabilities = [
-  "Admin dashboards",
-  "RBAC and auth",
+  "Dashboards",
+  "RBAC",
   "Backend systems",
-  "Payments and reporting",
-  "Operational cleanup"
+  "Payments",
+  "Stabilization"
 ];
 
 export const portfolioTrustCards = [
   {
     label: "Fit",
-    value: "Internal tools + product systems",
-    detail: "The strongest through-line is building the operational surfaces that teams actually use every day."
+    value: "Ops-heavy product work",
+    detail: "Best where product logic and internal workflows meet."
   },
   {
-    label: "Proof style",
-    value: "Specific and grounded",
-    detail: "Selected work should show what was built, why it mattered, and which constraints were handled."
+    label: "Tone",
+    value: "Specific, not loud",
+    detail: "The work is framed with clear outcomes and visible constraints."
   },
   {
-    label: "Public boundary",
+    label: "Boundary",
     value: "Curated only",
-    detail: "This route stays clean by excluding internal intake records, scoring logic, and research annotations."
+    detail: "No intake records, no scoring logic, no internal notes."
   }
 ];
 
-export const portfolioProjects = [
+export type PortfolioProjectLink = {
+  label: string;
+  href: string;
+};
+
+export type PortfolioProject = {
+  name: string;
+  summary: string;
+  projectType: string;
+  tags: string[];
+  links: PortfolioProjectLink[];
+  proof: string[];
+};
+
+export const portfolioProjects: PortfolioProject[] = [
   {
     name: "Operations Control Center",
-    summary: "An internal dashboard for account review, role-based access, and reporting workflows.",
+    summary: "An internal dashboard for review workflows, access control, and reporting.",
     projectType: "Admin platform",
     tags: ["Next.js", "PostgreSQL", "RBAC"],
+    links: [],
     proof: [
-      "Designed multi-role access for operators, managers, and support staff",
-      "Built data-heavy review screens that help teams move faster with less context switching",
-      "Connected backend reporting logic to practical decision-making interfaces"
+      "Multi-role access for operators, managers, and support",
+      "Dense review screens built for speed",
+      "Reporting tied directly to decisions"
     ]
   },
   {
     name: "Subscription and Billing Console",
-    summary: "A product operations surface for payment status, customer actions, and revenue reporting.",
+    summary: "A product operations surface for billing state, customer actions, and revenue reporting.",
     projectType: "Payments ops",
     tags: ["React", "Stripe", "Reporting"],
+    links: [],
     proof: [
-      "Mapped payment flows into clear operational states that support non-technical users",
-      "Reduced ambiguity by pairing billing data with admin actions in one place",
-      "Turned fragmented product logic into a sendable, client-understandable story"
+      "Payment flows mapped into clear states",
+      "Billing data paired with action controls",
+      "Complex logic translated into a sendable story"
     ]
   },
   {
     name: "Platform Stabilization Toolkit",
-    summary: "A backend-focused effort centered on cleanup, monitoring, and safer ownership transfer.",
+    summary: "A backend-focused effort centered on cleanup, monitoring, and safer ownership handoff.",
     projectType: "Maintenance and hardening",
     tags: ["NestJS", "Queues", "Observability"],
+    links: [],
     proof: [
-      "Improved reliability in a system that needed ongoing operational ownership",
-      "Added the kind of visibility that makes maintenance work safer and easier to trust",
-      "Framed technical cleanup as measurable risk reduction instead of vague refactoring"
+      "Reliability work for a system under active ownership",
+      "Observability added where trust was thin",
+      "Cleanup framed as measurable risk reduction"
     ]
   }
 ];
 
 export const portfolioSteps = [
   {
-    title: "Clarify the operational core",
-    detail: "Define the workflows, roles, and reporting decisions the product must support first."
+    title: "Clarify the core workflow",
+    detail: "Start with the roles, decisions, and reporting loops that matter."
   },
   {
     title: "Ship the essential surfaces",
-    detail: "Build the admin flows that create immediate value instead of overbuilding edge-case UI too early."
+    detail: "Build the useful path first and leave edge cases for later."
   },
   {
     title: "Harden for ownership",
-    detail: "Add the monitoring, guardrails, and structure needed for confident long-term maintenance."
+    detail: "Add the guardrails and visibility that make long-term maintenance safe."
   }
 ];

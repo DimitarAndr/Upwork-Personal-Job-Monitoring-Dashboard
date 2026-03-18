@@ -1,5 +1,15 @@
+import path from "path";
 import type { NextConfig } from "next";
+import { loadEnvConfig } from "@next/env";
 import { PHASE_DEVELOPMENT_SERVER } from "next/constants";
+import { fileURLToPath } from "url";
+
+const configFilePath = fileURLToPath(import.meta.url);
+const configDir = path.dirname(configFilePath);
+const repoRoot = path.resolve(configDir, "../..");
+
+// The repo keeps shared env in the workspace root, so load it explicitly for Next.
+loadEnvConfig(repoRoot);
 
 export default function nextConfig(phase: string): NextConfig {
   const isDevServer = phase === PHASE_DEVELOPMENT_SERVER;

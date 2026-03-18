@@ -1,7 +1,7 @@
 // Paste this into an n8n Code node that runs after your Yahoo IMAP trigger.
 // It normalizes the mail item into the JSON contract expected by POST /api/intake/email.
 
-const PARSE_VERSION = "yahoo-imap-v2";
+const PARSE_VERSION = "yahoo-imap-v3";
 
 function pickString(...values) {
   for (const value of values) {
@@ -153,6 +153,46 @@ function extractJobUrl(text, html) {
   }
 
   return canonicalizeUpworkJobUrl(findFirstUrl(html) ?? findFirstUrl(text));
+}
+
+function parseUpworkPath(sourceUrl) {
+  if (!sourceUrl) {
+    return "";
+  }
+
+  try {
+    return new URL(sourceUrl).pathname.toLowerCase();
+  } catch {
+    return sourceUrl.toLowerCase();
+  }
+}
+
+function isLikelyUpworkJobAlert(subject, title, rawText, sourceUrl) {
+  const safeSubject = subject?.trim().toLowerCase() ?? "";
+  const safeTitle = title?.trim().toLowerCase() ?? "";
+  const safeText = rawText?.trim().toLowerCase() ?? "";
+  const path = parseUpworkPath(sourceUrl);
+
+  const hasJobUrl = path.includes("/jobs/~");
+  const hasJobSubject = safeSubject.startsWith("new job:") || safeSubject.startsWith("new jobs matching:");
+  const hasJobBody =
+    safeText.includes("new job alert") ||
+    (safeText.includes("view job details:") && /posted on \d{4}-\d{2}-\d{2}/i.test(rawText));
+
+  const hasNegativeSubject = /milestones? have been updated|milestone|workroom|offer|interview|proposal|message/i.test(
+    `${safeSubject} ${safeTitle}`
+  );
+  const hasNegativeBody =
+    safeText.includes("your milestones have been updated") ||
+    safeText.includes("made updates to your contract") ||
+    safeText.includes("workroom");
+  const hasNegativeUrl =
+    path.includes("/workroom/") ||
+    path.includes("/offers/") ||
+    path.includes("/messages/") ||
+    path.includes("/contracts/");
+
+  return hasJobUrl && (hasJobSubject || hasJobBody) && !hasNegativeSubject && !hasNegativeBody && !hasNegativeUrl;
 }
 
 function parsePricing(rawText) {
@@ -459,12 +499,19 @@ const receivedAt = toIsoDate(
 );
 const html = pickString(input.html, input.htmlBody, input.messageHtml) ?? "";
 const text = pickString(input.text, input.textPlain, input.messageText) ?? stripHtml(html);
+const title = extractTitle(subject, text);
+const sourceUrl = extractJobUrl(text, html);
+
+if (!isLikelyUpworkJobAlert(subject, title, text, sourceUrl)) {
+  return [];
+}
+
 const postedAt = extractPostedAt(text);
 const pricing = parsePricing(text);
 const visibleSkillsInfo = extractVisibleSkills(text);
 const clientSignals = extractClientSignals(text);
 
-return {
+return [{
   json: {
     channel: "EMAIL_ALERT",
     externalId,
@@ -473,8 +520,8 @@ return {
     sender,
     receivedAt,
     postedAt,
-    title: extractTitle(subject, text),
-    sourceUrl: extractJobUrl(text, html),
+    title,
+    sourceUrl,
     rawText: text,
     summary: text.slice(0, 280),
     pricingType: pricing.pricingType,
@@ -509,4 +556,4 @@ return {
       }
     }
   }
-};
+}];

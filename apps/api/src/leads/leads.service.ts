@@ -12,6 +12,7 @@ import {
 } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateLeadEnrichmentDto } from "./dto/create-lead-enrichment.dto";
+import { isLikelyUpworkJobAlert } from "../intake/upwork-job-alert";
 
 const MANUAL_PARSE_VERSION = "manual-job-detail-v1";
 
@@ -58,7 +59,19 @@ export class LeadsService {
       }
     });
 
-    return leads.map((lead) => {
+    return leads
+      .filter((lead) => {
+        if (lead.sourceType !== SourceType.EMAIL_ALERT) {
+          return true;
+        }
+
+        return isLikelyUpworkJobAlert({
+          title: lead.title,
+          rawText: lead.rawText,
+          sourceUrl: lead.sourceUrl
+        });
+      })
+      .map((lead) => {
       const needsEnrichmentReasons = this.getEnrichmentReasons(lead);
       const latestFieldProvenance = this.getLatestFieldProvenance(lead.fieldProvenance);
       const dataQuality = this.calculateDataQuality(lead, latestFieldProvenance);
@@ -89,7 +102,7 @@ export class LeadsService {
         needsEnrichment: lead.enrichmentStatus !== EnrichmentStatus.ENRICHED,
         needsEnrichmentReasons
       };
-    });
+      });
   }
 
   async enrichLead(leadId: string, payload: CreateLeadEnrichmentDto) {

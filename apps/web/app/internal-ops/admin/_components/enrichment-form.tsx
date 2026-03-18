@@ -48,10 +48,12 @@ export function EnrichmentForm({ leadId, leadTitle }: EnrichmentFormProps) {
         <div className="sectionHeading">
           <div>
             <p className="eyebrow">Manual enrichment</p>
-            <h2>Select a lead first.</h2>
+            <h2>Select a lead from the admin desk first.</h2>
           </div>
         </div>
-        <div className="emptyPanel">Open this screen from the lead desk.</div>
+        <div className="emptyPanel">
+          Open this screen from the lead list so the form knows which row to enrich.
+        </div>
       </section>
     );
   }
@@ -110,9 +112,12 @@ export function EnrichmentForm({ leadId, leadTitle }: EnrichmentFormProps) {
       <div className="sectionHeading">
         <div>
           <p className="eyebrow">Manual enrichment</p>
-          <h2>Add job-page detail.</h2>
+          <h2>Paste the real job-page content for the lead you care about.</h2>
         </div>
-        <p className="sectionText">Store fuller source text and safe structured fields.</p>
+        <p className="sectionText">
+          This stores the job-page payload as a separate intake record and updates the lead with
+          any safer structured details you provide.
+        </p>
       </div>
 
       <div className="enrichmentHeader">

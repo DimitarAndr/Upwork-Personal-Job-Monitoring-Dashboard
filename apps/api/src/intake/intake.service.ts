@@ -12,6 +12,7 @@ import {
 } from "@prisma/client";
 import { CreateEmailIntakeDto } from "./dto/create-email-intake.dto";
 import { PrismaService } from "../prisma/prisma.service";
+import { isLikelyUpworkJobAlert } from "./upwork-job-alert";
 
 @Injectable()
 export class IntakeService {
@@ -22,6 +23,25 @@ export class IntakeService {
 
   async createEmailIntake(payload: CreateEmailIntakeDto) {
     const data = this.validateEmailPayload(payload);
+
+    if (
+      !isLikelyUpworkJobAlert({
+        subject: data.subject,
+        title: data.title,
+        rawText: data.rawText,
+        sourceUrl: data.sourceUrl
+      })
+    ) {
+      this.logger.log(
+        `Ignored non-job email externalId=${data.externalId ?? "n/a"} subject="${data.subject ?? data.title}"`
+      );
+
+      return {
+        duplicate: false,
+        ignored: true,
+        reason: "non_job_email"
+      };
+    }
 
     // Start with message-id based dedupe because Yahoo/n8n can provide it reliably.
     if (data.externalId) {
